@@ -5,48 +5,96 @@
 ## 功能特性
 
 - **多版本管理**：安装、切换、卸载不同版本的 HarmonyOS command-line-tools
-- **本地导入**：从现有 command-line-tools 目录导入（`--from`）
-- **环境变量**：自动设置 `DEVECO_NODE_HOME`、`DEVECO_SDK_HOME`、`PATH`
+- **两种安装模式**：完整复制（`--from`）或符号链接（`--link`，零拷贝）
+- **版本信息表格**：`hmvm list` 展示 codelinter / ohpm / hstack / hvigor / API 版本
+- **环境变量自动设置**：`hmvm use` 自动设置 `DEVECO_NODE_HOME`、`DEVECO_SDK_HOME`、`HMVM_CURRENT`
 - **项目配置**：支持 `.hmvmrc` 指定项目所需版本
-- **别名**：支持 `default`、`stable` 等别名
+- **别名**：支持 `default` 等别名，新建 shell 自动激活
 
 ## 安装
 
 ### 从本地仓库安装
 
 ```bash
-cd /path/to/hmvm
+git clone https://github.com/SummerKaze/hmvm.git ~/.hmvm
+cd ~/.hmvm
 ./install.sh
 ```
 
-安装脚本会检测当前目录下的 `hmvm.sh`，并配置到 `~/.hmvm`（或 `$HMVM_DIR`）。
+安装脚本会将 source 指令写入 shell profile（`~/.zshrc` 或 `~/.bashrc`），重启终端或 `source ~/.zshrc` 后生效。
 
-### 从 GitHub 安装（需先发布到 GitHub）
+### 从 GitHub 安装
 
 ```bash
-curl -o- https://raw.githubusercontent.com/hmvm/hmvm/main/install.sh | bash
+curl -o- https://raw.githubusercontent.com/SummerKaze/hmvm/main/install.sh | bash
 # 或
-wget -qO- https://raw.githubusercontent.com/hmvm/hmvm/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/SummerKaze/hmvm/main/install.sh | bash
 ```
 
 ## 使用
 
-### 从现有环境导入
+### 安装 command-line-tools 版本
 
-若你已有鸿蒙 command-line-tools（如 DevEco Studio 自带的），可导入到 hmvm 管理：
+> **⚠️ 在线下载暂不支持**（TODO：华为账号登录鉴权，后续计划支持）。  
+> 目前请通过以下两种本地安装方式导入已有的 command-line-tools 目录。
+
+#### 方式一：完整复制安装
+
+将指定目录的 command-line-tools **完整复制**到 hmvm 管理目录，安全独立但占用额外磁盘空间。
 
 ```bash
-hmvm install 6.1.0.609 --from /Users/h1007/command-line-tools
-# 使用 --link 可创建符号链接，安装更快（不复制文件）
-hmvm install 6.1.0.609 --from /Users/h1007/command-line-tools --link
+hmvm install 6.1.0.609 --from /path/to/command-line-tools
 ```
+
+#### 方式二：符号链接安装（推荐，零拷贝）
+
+直接创建符号链接，**不复制文件**，安装瞬间完成，适合已有 DevEco Studio 或独立 command-line-tools 的场景。
+
+```bash
+hmvm install 6.1.0.609 --from /path/to/command-line-tools --link
+
+# 示例：使用 DevEco Studio 内置的 command-line-tools
+hmvm install 6.1.0.609 --from "/Applications/DevEco-Studio.app/Contents/command-line-tools" --link
+```
+
+> 卸载符号链接版本时（`hmvm uninstall`）只删除链接本身，不影响原始目录。
+
+### 查看已安装版本
+
+```
+$ hmvm list
+Cache directory:  ~/.hmvm/versions/clt
+Directory Size: 6.1G
+
+┌─────────────┬────────────┬───────┬────────┬────────┬─────┬────────┬───────┐
+│ Version     │ codelinter │ ohpm  │ hstack │ hvigor │ API │ Global │ Local │
+├─────────────┼────────────┼───────┼────────┼────────┼─────┼────────┼───────┤
+│ 6.0.2       │ 6.0.240    │ 6.0.1 │ 5.1.0  │ 6.22.3 │ 22  │        │       │
+├─────────────┼────────────┼───────┼────────┼────────┼─────┼────────┼───────┤
+│ 6.1.0.609   │ 6.0.240    │ 6.1.1 │ 5.1.0  │ 6.23.2 │ 23  │ ●      │       │
+└─────────────┴────────────┴───────┴────────┴────────┴─────┴────────┴───────┘
+```
+
+- **Global `●`**：当前 shell 激活的全局版本（`hmvm use` 设置）
+- **Local `●`**：当前目录 `.hmvmrc` 指定的版本
 
 ### 切换版本
 
 ```bash
-hmvm use 6.1.0.609
-hmvm use default
+hmvm use 6.1.0.609         # 激活指定版本（当前 shell 生效）
+hmvm use default           # 激活 default 别名对应的版本
+hmvm use                   # 读取当前目录 .hmvmrc 自动切换
+hmvm use 6.1.0.609 --save  # 激活并写入 .hmvmrc（项目级固定版本）
+hmvm current               # 查看当前激活的版本
 ```
+
+### 设置默认版本（新建 shell 自动激活）
+
+```bash
+hmvm alias default 6.1.0.609
+```
+
+在 shell profile 中 source hmvm.sh 后，每次新建终端自动激活 `default` 别名对应的版本。
 
 ### 项目内使用 .hmvmrc
 
@@ -56,77 +104,92 @@ hmvm use default
 6.1.0.609
 ```
 
-进入项目后执行 `hmvm use`（无参数）即可自动切换。
-
-也可在切换时保存到 `.hmvmrc`：
+进入项目后执行 `hmvm use`（无参数）即可按 `.hmvmrc` 自动切换：
 
 ```bash
-hmvm use 6.1.0.609 --save
+cd ~/my-harmony-project
+hmvm use
+# Now using HarmonyOS command-line-tools v6.1.0.609
 ```
 
-### 常用命令
+### 卸载版本
+
+```bash
+hmvm uninstall 6.0.2
+```
+
+> 符号链接安装的版本：只删除链接，原始 command-line-tools 目录不受影响。
+
+### 完整命令列表
 
 | 命令 | 说明 |
 |------|------|
-| `hmvm install <version> --from <path> [--link]` | 从本地路径安装（--link 为符号链接） |
-| `hmvm use [<version>] [--save]` | 切换版本（或读取 .hmvmrc） |
-| `hmvm ls` | 列出已安装版本 |
-| `hmvm ls-remote` | 列出可安装版本（需配置 versions.json） |
-| `hmvm current` | 显示当前版本 |
+| `hmvm install <version> --from <path>` | 从本地路径复制安装 |
+| `hmvm install <version> --from <path> --link` | 从本地路径符号链接安装（零拷贝） |
+| `hmvm use [<version>] [--save]` | 切换版本（无参数读取 .hmvmrc） |
+| `hmvm list` / `hmvm ls` | 列出已安装版本（表格形式） |
+| `hmvm current` | 显示当前激活版本 |
 | `hmvm uninstall <version>` | 卸载版本 |
-| `hmvm alias <name> [<version>]` | 设置/查看别名 |
+| `hmvm alias <name> [<version>]` | 设置 / 查看 / 删除别名 |
 | `hmvm which [command]` | 显示命令路径（默认 ohpm） |
+| `hmvm ls-remote` | 列出可用远程版本（需配置 versions.json） |
 
 ## 目录结构
 
 ```
-$HMVM_DIR/                    # 默认 ~/.hmvm
-├── hmvm.sh                   # 主脚本
-├── install.sh                # 安装脚本
-├── bash_completion           # 自动补全
-├── versions.json             # 远程版本配置（可选）
+$HMVM_DIR/                        # 默认 ~/.hmvm
+├── hmvm.sh                       # 主脚本（source 到 shell profile）
+├── install.sh                    # 安装脚本
+├── bash_completion               # 自动补全
+├── versions.json                 # 远程版本配置（可选）
 ├── versions/
-│   └── clt/                  # command-line-tools
-│       ├── v6.1.0.609/
-│       └── v6.0.0.xxx/
-└── alias/                    # 版本别名
+│   └── clt/                      # command-line-tools 版本目录
+│       ├── v6.1.0.609/           # 完整复制安装的版本
+│       ├── v6.0.2 -> /path/...   # 符号链接安装的版本
+│       └── .meta_v6.0.2.txt      # 符号链接版本的旁路元数据（自动生成）
+└── alias/                        # 版本别名
+    └── default                   # 默认版本
 ```
 
 ## 环境变量
 
-- `HMVM_DIR`：hmvm 安装目录，默认 `~/.hmvm`
-- `DEVECO_NODE_HOME`：由 `hmvm use` 设置，指向当前版本的 `tool/node`
-- `DEVECO_SDK_HOME`：由 `hmvm use` 设置，指向当前版本的 `sdk`
+| 变量 | 说明 |
+|------|------|
+| `HMVM_DIR` | hmvm 安装目录，默认 `~/.hmvm` |
+| `HMVM_CURRENT` | 当前激活的版本号（由 `hmvm use` 写入） |
+| `DEVECO_NODE_HOME` | 当前版本的 `tool/node` 路径 |
+| `DEVECO_SDK_HOME` | 当前版本的 `sdk` 路径 |
+| `HMVM_BIN` | 当前版本的 `bin` 目录路径 |
 
 ## 迁移现有配置
 
-若你已在 `~/.zshrc` 中配置：
+若已在 `~/.zshrc` 中手动配置 command-line-tools 路径：
 
 ```bash
+# 旧配置
 export PATH=~/command-line-tools/bin:$PATH
+export DEVECO_NODE_HOME=~/command-line-tools/tool/node
 ```
 
-可改为：
+可替换为 hmvm 管理（install.sh 安装后自动添加 source 指令）：
 
 ```bash
-# 由 install.sh 自动添加
-export HMVM_DIR="$HOME/.hmvm"
-[ -s "$HMVM_DIR/hmvm.sh" ] && . "$HMVM_DIR/hmvm.sh"
-```
-
-然后执行：
-
-```bash
-hmvm install 6.1.0.609 --from ~/command-line-tools
+# 用 --link 导入，无需复制文件
+hmvm install 6.1.0.609 --from ~/command-line-tools --link
 hmvm use 6.1.0.609
-hmvm alias default 6.1.0.609
+hmvm alias default 6.1.0.609   # 新建 shell 自动激活
 ```
 
 ## 技术说明
 
 - 纯 Shell 实现，POSIX 兼容，支持 bash、zsh
-- 参考 nvm 的 PATH 管理逻辑
-- 鸿蒙 command-line-tools 依赖 `DEVECO_NODE_HOME`、`DEVECO_SDK_HOME`，hmvm 在 `use` 时自动设置
+- PATH 管理逻辑参考 nvm；版本表格展示参考 fvm
+- 符号链接版本通过旁路元数据文件（`.meta_v*.txt`）存储版本信息，`hmvm list` 懒加载生成
+- `hmvm use` 写入 `$HMVM_CURRENT` 环境变量，`hmvm current` 直接读取，避免 zsh `CHASE_LINKS` 路径推断失效问题
+
+## TODO
+
+- [ ] 在线下载安装（华为账号登录鉴权，后续计划支持）
 
 ## License
 
