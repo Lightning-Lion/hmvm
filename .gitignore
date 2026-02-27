@@ -5,8 +5,7 @@ versions/
 alias/
 
 # 本地规划文件
-plan-time.md
-startTime.png
+planDoc/
 
 # macOS
 .DS_Store
