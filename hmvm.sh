@@ -133,12 +133,16 @@ hmvm_change_path() {
   fi
 }
 
-# 检查版本是否已安装（存在 version.txt 或 bin/ohpm）
+# 检查版本是否已安装（软链接存在即视为已安装；否则检查 version.txt 或 bin/ohpm）
 hmvm_is_version_installed() {
   local VERSION_PATH
   VERSION_PATH="$(hmvm_version_path "${1-}" 2>/dev/null)"
   if [ -z "${VERSION_PATH}" ]; then
     return 1
+  fi
+  # --link 安装的版本：符号链接存在即视为已安装
+  if [ -L "${VERSION_PATH}" ]; then
+    return 0
   fi
   if [ -f "${VERSION_PATH}/version.txt" ] || [ -f "${VERSION_PATH}/bin/ohpm" ]; then
     return 0
@@ -530,7 +534,16 @@ hmvm_uninstall() {
   local VERSION_PATH
   VERSION_PATH="$(hmvm_version_path "${VERSION}")"
   hmvm_echo "Uninstalling HarmonyOS command-line-tools ${VERSION}..."
-  command rm -rf "${VERSION_PATH}"
+  if [ -L "${VERSION_PATH}" ]; then
+    # 软链接安装的版本：只删除符号链接本身，绝不递归删除链接目标目录
+    command rm -f "${VERSION_PATH}"
+  else
+    command rm -rf "${VERSION_PATH}"
+  fi
+  # 清理软链接版本的旁路元数据文件
+  local META_FILE
+  META_FILE="$(hmvm_symlink_meta_path "${VERSION}")"
+  [ -f "${META_FILE}" ] && command rm -f "${META_FILE}" 2>/dev/null || true
   hmvm_echo "Uninstalled ${VERSION}."
   return 0
 }
