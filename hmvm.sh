@@ -7,6 +7,7 @@
 { # this ensures the entire script is downloaded #
 
 HMVM_SCRIPT_SOURCE="$_"
+HMVM_VERSION="1.0"
 
 # =============================================================================
 # 工具函数（移植自 nvm）
@@ -726,6 +727,9 @@ hmvm() {
   shift || true
 
   case "${COMMAND}" in
+    -V|--version)
+      hmvm_echo "${HMVM_VERSION}"
+      ;;
     ""|help)
       hmvm_print_help
       ;;

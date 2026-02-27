@@ -42,19 +42,22 @@ wget -qO- https://raw.githubusercontent.com/SummerKaze/hmvm/main/install.sh | ba
 
 将指定目录的 command-line-tools **完整复制**到 hmvm 管理目录，安全独立但占用额外磁盘空间。
 
-```bash
-hmvm install 6.1.0.609 --from /path/to/command-line-tools
+```
+$ hmvm install 6.1.0 --from /path/to/command-line-tools
+Installing HarmonyOS command-line-tools v6.1.0 from /path/to/command-line-tools...
+Installed HarmonyOS command-line-tools v6.1.0 successfully.
+Now using HarmonyOS command-line-tools v6.1.0
 ```
 
 #### 方式二：符号链接安装（推荐，零拷贝）
 
 直接创建符号链接，**不复制文件**，安装瞬间完成，适合已有 DevEco Studio 或独立 command-line-tools 的场景。
 
-```bash
-hmvm install 6.1.0.609 --from /path/to/command-line-tools --link
-
-# 示例：使用 DevEco Studio 内置的 command-line-tools
-hmvm install 6.1.0.609 --from "/Applications/DevEco-Studio.app/Contents/command-line-tools" --link
+```
+$ hmvm install 6.0.2 --from /path/to/command-line-tools_6.0.2 --link
+Linking HarmonyOS command-line-tools v6.0.2 from /path/to/command-line-tools_6.0.2...
+Linked HarmonyOS command-line-tools v6.0.2 successfully.
+Now using HarmonyOS command-line-tools v6.0.2
 ```
 
 > 卸载符号链接版本时（`hmvm uninstall`）只删除链接本身，不影响原始目录。
@@ -71,7 +74,7 @@ Directory Size: 6.1G
 ├─────────────┼────────────┼───────┼────────┼────────┼─────┼────────┼───────┤
 │ 6.0.2       │ 6.0.240    │ 6.0.1 │ 5.1.0  │ 6.22.3 │ 22  │        │       │
 ├─────────────┼────────────┼───────┼────────┼────────┼─────┼────────┼───────┤
-│ 6.1.0.609   │ 6.0.240    │ 6.1.1 │ 5.1.0  │ 6.23.2 │ 23  │ ●      │       │
+│ 6.1.0       │ 6.0.240    │ 6.1.1 │ 5.1.0  │ 6.23.2 │ 23  │ ●      │       │
 └─────────────┴────────────┴───────┴────────┴────────┴─────┴────────┴───────┘
 ```
 
@@ -81,17 +84,31 @@ Directory Size: 6.1G
 ### 切换版本
 
 ```bash
-hmvm use 6.1.0.609         # 激活指定版本（当前 shell 生效）
+hmvm use 6.1.0             # 激活指定版本（当前 shell 生效）
 hmvm use default           # 激活 default 别名对应的版本
 hmvm use                   # 读取当前目录 .hmvmrc 自动切换
-hmvm use 6.1.0.609 --save  # 激活并写入 .hmvmrc（项目级固定版本）
+hmvm use 6.1.0 --save      # 激活并写入 .hmvmrc（项目级固定版本）
 hmvm current               # 查看当前激活的版本
+```
+
+切换后工具链版本立即生效：
+
+```
+$ hmvm use 6.0.2
+Now using HarmonyOS command-line-tools v6.0.2
+$ hvigorw --version
+6.22.3
+
+$ hmvm use 6.1.0
+Now using HarmonyOS command-line-tools v6.1.0
+$ hvigorw --version
+6.23.2
 ```
 
 ### 设置默认版本（新建 shell 自动激活）
 
 ```bash
-hmvm alias default 6.1.0.609
+hmvm alias default 6.1.0
 ```
 
 在 shell profile 中 source hmvm.sh 后，每次新建终端自动激活 `default` 别名对应的版本。
@@ -101,7 +118,7 @@ hmvm alias default 6.1.0.609
 在项目根目录创建 `.hmvmrc`，写入版本号：
 
 ```
-6.1.0.609
+6.1.0
 ```
 
 进入项目后执行 `hmvm use`（无参数）即可按 `.hmvmrc` 自动切换：
@@ -109,7 +126,7 @@ hmvm alias default 6.1.0.609
 ```bash
 cd ~/my-harmony-project
 hmvm use
-# Now using HarmonyOS command-line-tools v6.1.0.609
+# Now using HarmonyOS command-line-tools v6.1.0
 ```
 
 ### 卸载版本
@@ -124,6 +141,7 @@ hmvm uninstall 6.0.2
 
 | 命令 | 说明 |
 |------|------|
+| `hmvm -V` / `hmvm --version` | 显示 hmvm 版本号 |
 | `hmvm install <version> --from <path>` | 从本地路径复制安装 |
 | `hmvm install <version> --from <path> --link` | 从本地路径符号链接安装（零拷贝） |
 | `hmvm use [<version>] [--save]` | 切换版本（无参数读取 .hmvmrc） |
@@ -144,7 +162,7 @@ $HMVM_DIR/                        # 默认 ~/.hmvm
 ├── versions.json                 # 远程版本配置（可选）
 ├── versions/
 │   └── clt/                      # command-line-tools 版本目录
-│       ├── v6.1.0.609/           # 完整复制安装的版本
+│       ├── v6.1.0/           # 完整复制安装的版本
 │       ├── v6.0.2 -> /path/...   # 符号链接安装的版本
 │       └── .meta_v6.0.2.txt      # 符号链接版本的旁路元数据（自动生成）
 └── alias/                        # 版本别名
@@ -177,9 +195,9 @@ export DEVECO_NODE_HOME=~/command-line-tools/tool/node
 
 ```bash
 # 用 --link 导入，无需复制文件
-hmvm install 6.1.0.609 --from ~/command-line-tools --link
-hmvm use 6.1.0.609
-hmvm alias default 6.1.0.609   # 新建 shell 自动激活
+hmvm install 6.1.0 --from ~/command-line-tools --link
+hmvm use 6.1.0
+hmvm alias default 6.1.0   # 新建 shell 自动激活
 ```
 
 ## 技术说明
